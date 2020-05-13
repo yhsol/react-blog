@@ -8,6 +8,16 @@ router.get("/", (ctx) => {
   ctx.body = "home";
 });
 
+router.get("/about/:name?", (ctx) => {
+  const { name } = ctx.params;
+  ctx.body = name ? `about ${name}` : "about";
+});
+
+router.get("/posts", (ctx) => {
+  const { id } = ctx.query;
+  ctx.body = id ? `post ${id}` : "no post id";
+});
+
 router.get("/about", (ctx) => {
   ctx.body = "about";
 });
