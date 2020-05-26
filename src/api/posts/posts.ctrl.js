@@ -1,8 +1,33 @@
 import Post from "../../models/post";
+import mongoose from "mongoose";
+import Joi from "joi";
+
+const { ObjectId } = mongoose.Types;
+
+export const checkObjectId = (ctx, next) => {
+  const { id } = ctx.params;
+  if (!ObjectId.isValid(id)) {
+    ctx.status = 400;
+    return;
+  }
+  return next();
+};
 
 export const write = async (ctx) => {
+  const schema = Joi.object().keys({
+    title: Joi.string().required(),
+    body: Joi.string().required(),
+    tags: Joi.array().items(Joi.string()).required(),
+  });
+
+  const result = Joi.validate(ctx.request.body, schema);
+  if (result.error) {
+    ctx.status = 400;
+    ctx.body = result.error;
+    return;
+  }
+
   const { title, body, tags } = ctx.request.body;
-  console.log("ctx: ", ctx.request.body);
   const post = new Post({
     title,
     body,
@@ -10,7 +35,6 @@ export const write = async (ctx) => {
   });
   try {
     await post.save();
-    console.log("post: ", post);
     ctx.body = post;
   } catch (error) {
     ctx.throw(500, error);
@@ -26,8 +50,53 @@ export const list = async (ctx) => {
   }
 };
 
-export const read = (ctx) => {};
+export const read = async (ctx) => {
+  const { id } = ctx.params;
+  try {
+    const post = await Post.findById(id).exec();
+    if (!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.body = post;
+  } catch (error) {
+    ctx.throw(500, error);
+  }
+};
 
-export const remove = (ctx) => {};
+export const remove = async (ctx) => {
+  const { id } = ctx.params;
+  try {
+    await Post.findByIdAndRemove(id).exec();
+    ctx.status = 204;
+  } catch (error) {
+    ctx.throw(500, error);
+  }
+};
 
-export const update = (ctx) => {};
+export const update = async (ctx) => {
+  const { id } = ctx.params;
+  const schema = Joi.object().keys({
+    title: Joi.string(),
+    body: Joi.string(),
+    tags: Joi.array().items(Joi.string()),
+  });
+  const result = Joi.validate(ctx.request.body, schema);
+  if (result.error) {
+    ctx.status = 400;
+    ctx.body = result.error;
+    return;
+  }
+  try {
+    const post = await Post.findByIdAndUpdate(id, ctx.request.body, {
+      new: true,
+    }).exec();
+    if (!post) {
+      ctx.status = 404;
+      return;
+    }
+    ctx.body = post;
+  } catch (error) {
+    ctx.throw(500, error);
+  }
+};
